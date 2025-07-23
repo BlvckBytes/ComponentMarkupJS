@@ -24,7 +24,7 @@ public class ComponentMarkupJs {
 
   @JSExport
   public static JSParseError tokenize(String input, boolean lenient, boolean expression) {
-    TokenOutput tokenOutput = new TokenOutput(lenient ? NO_FLAGS : LENIENT_FLAGS);
+    TokenOutput tokenOutput = new TokenOutput(lenient ? LENIENT_FLAGS : NO_FLAGS);
 
     String errorMessage = null;
     int errorCharIndex = -1;
