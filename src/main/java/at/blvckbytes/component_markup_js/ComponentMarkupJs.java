@@ -8,6 +8,7 @@ import at.blvckbytes.component_markup.markup.parser.MarkupParser;
 import at.blvckbytes.component_markup.markup.parser.token.HierarchicalToken;
 import at.blvckbytes.component_markup.markup.parser.token.OutputFlag;
 import at.blvckbytes.component_markup.markup.parser.token.TokenOutput;
+import at.blvckbytes.component_markup.util.StringView;
 import org.teavm.jso.JSExport;
 
 import java.util.EnumSet;
@@ -25,6 +26,7 @@ public class ComponentMarkupJs {
   @JSExport
   public static JSParseError tokenize(String input, boolean lenient, boolean expression) {
     TokenOutput tokenOutput = new TokenOutput(lenient ? LENIENT_FLAGS : NO_FLAGS);
+    StringView inputView = StringView.of(input);
 
     String errorMessage = null;
     int errorCharIndex = -1;
@@ -33,19 +35,19 @@ public class ComponentMarkupJs {
 
     if (expression) {
       try {
-        tokenOutput.onInitialization(input);
-        ExpressionParser.parse(input, 0, tokenOutput);
+        tokenOutput.onInitialization(inputView);
+        ExpressionParser.parse(inputView, tokenOutput);
         tokenOutput.onInputEnd();
         hierarchicalTokens = tokenOutput.getResult();
       } catch (ExpressionParseException e) {
         errorMessage = e.getErrorMessage();
-        errorCharIndex = e.charIndex;
+        errorCharIndex = e.position;
       }
     }
 
     else {
       try {
-        MarkupParser.parse(input, BuiltInTagRegistry.INSTANCE, tokenOutput);
+        MarkupParser.parse(inputView, BuiltInTagRegistry.INSTANCE, tokenOutput);
         hierarchicalTokens = tokenOutput.getResult();
       } catch (MarkupParseException e) {
         errorMessage = e.getErrorMessage();
@@ -54,8 +56,8 @@ public class ComponentMarkupJs {
     }
 
     if (hierarchicalTokens != null) {
-      HierarchicalToken.toSequence(hierarchicalTokens, (type, beginIndex, value) -> {
-        JSTokenEmitter.onEmitToken(type.name(), beginIndex, beginIndex + value.length(), value);
+      HierarchicalToken.toSequence(hierarchicalTokens, (type, value) -> {
+        JSTokenEmitter.onEmitToken(type.name(), value.startInclusive, value.endExclusive, value.buildString());
       });
     }
 
