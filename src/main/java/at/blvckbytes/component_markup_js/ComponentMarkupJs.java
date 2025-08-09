@@ -20,7 +20,8 @@ public class ComponentMarkupJs {
 
   private static final EnumSet<OutputFlag> LENIENT_FLAGS = EnumSet.of(
     OutputFlag.ENABLE_DUMMY_TAG,
-    OutputFlag.UNMATCHED_CLOSING_TAGS_ARE_NO_OPS
+    OutputFlag.UNMATCHED_CLOSING_TAGS_ARE_NO_OPS,
+    OutputFlag.ALLOW_MISSING_ATTRIBUTES
   );
 
   @JSExport
