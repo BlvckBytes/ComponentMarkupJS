@@ -32,6 +32,12 @@
             <version>26.0.2</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-dom</artifactId>
+            <version>0.3.2</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

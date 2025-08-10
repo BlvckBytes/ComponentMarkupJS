@@ -1,20 +1,28 @@
 package at.blvckbytes.component_markup_js;
 
+import at.blvckbytes.component_markup.expression.interpreter.InterpretationEnvironment;
 import at.blvckbytes.component_markup.expression.parser.ExpressionParseException;
 import at.blvckbytes.component_markup.expression.parser.ExpressionParser;
+import at.blvckbytes.component_markup.markup.ast.node.MarkupNode;
 import at.blvckbytes.component_markup.markup.ast.tag.built_in.BuiltInTagRegistry;
+import at.blvckbytes.component_markup.markup.interpreter.ComponentOutput;
+import at.blvckbytes.component_markup.markup.interpreter.MarkupInterpreter;
 import at.blvckbytes.component_markup.markup.parser.MarkupParseException;
 import at.blvckbytes.component_markup.markup.parser.MarkupParser;
 import at.blvckbytes.component_markup.markup.parser.token.HierarchicalToken;
 import at.blvckbytes.component_markup.markup.parser.token.OutputFlag;
 import at.blvckbytes.component_markup.markup.parser.token.TokenOutput;
+import at.blvckbytes.component_markup.platform.SlotType;
 import at.blvckbytes.component_markup.util.StringView;
+import org.teavm.dom.html.HTMLElement;
 import org.teavm.jso.JSExport;
 
 import java.util.EnumSet;
 import java.util.List;
 
 public class ComponentMarkupJs {
+
+  private static final HTMLComponentConstructor COMPONENT_CONSTRUCTOR = new HTMLComponentConstructor();
 
   private static final EnumSet<OutputFlag> NO_FLAGS = EnumSet.noneOf(OutputFlag.class);
 
@@ -25,7 +33,7 @@ public class ComponentMarkupJs {
   );
 
   @JSExport
-  public static JSParseError tokenize(String input, boolean lenient, boolean expression) {
+  public static JSParseError tokenize(String input, boolean lenient, boolean expression, boolean interpret) {
     TokenOutput tokenOutput = new TokenOutput(lenient ? LENIENT_FLAGS : NO_FLAGS);
     StringView inputView = StringView.of(input);
 
@@ -48,7 +56,25 @@ public class ComponentMarkupJs {
 
     else {
       try {
-        MarkupParser.parse(inputView, BuiltInTagRegistry.INSTANCE, tokenOutput);
+        MarkupNode ast = MarkupParser.parse(inputView, BuiltInTagRegistry.INSTANCE, tokenOutput);
+
+        if (interpret) {
+          ComponentOutput output = MarkupInterpreter.interpret(
+            COMPONENT_CONSTRUCTOR,
+            new InterpretationEnvironment(),
+            null,
+            COMPONENT_CONSTRUCTOR.getSlotContext(SlotType.CHAT),
+            ast
+          );
+
+          HTMLElement[] components = new HTMLElement[output.unprocessedComponents.size()];
+
+          for (int i = 0; i < components.length; ++i)
+            components[i] = (HTMLElement) output.unprocessedComponents.get(i);
+
+          JSComponentsEmitter.onEmitComponents(components);
+        }
+
         hierarchicalTokens = tokenOutput.getResult();
       } catch (MarkupParseException e) {
         errorMessage = e.getErrorMessage();
