@@ -81,7 +81,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
     List<Object> result = new ArrayList<>();
 
-    int remainingChars = translation.length();
+    int remainingChars = translation.length() - 1;
 
     int nextAppendIndex = 0;
     int withIndex = 0;
@@ -89,7 +89,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     for (int charIndex = 0; charIndex < translation.length(); ++charIndex) {
       --remainingChars;
 
-      if (translation.charAt(charIndex)== '%' && remainingChars != 0) {
+      if (translation.charAt(charIndex) == '%' && remainingChars > 0) {
         char nextChar = translation.charAt(charIndex + 1);
 
         int index;
@@ -99,7 +99,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
         else
           index = withIndex++;
 
-        if (withIndex == with.size())
+        if (index < 0 || index >= with.size())
           return createTextComponent(key);
 
         if (charIndex != 0)
