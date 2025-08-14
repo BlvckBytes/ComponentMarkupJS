@@ -6,18 +6,21 @@ import at.blvckbytes.component_markup.markup.ast.node.terminal.RendererParameter
 import at.blvckbytes.component_markup.platform.*;
 import at.blvckbytes.component_markup.util.TriState;
 import org.jetbrains.annotations.Nullable;
-import org.teavm.dom.html.HTMLDocument;
-import org.teavm.dom.html.HTMLElement;
 import org.teavm.jso.JSBody;
+import org.teavm.jso.dom.html.HTMLDocument;
+import org.teavm.jso.dom.html.HTMLElement;
+import org.teavm.jso.dom.xml.Node;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 public class HTMLComponentConstructor implements ComponentConstructor {
 
   private static final String COMPONENT_CLASS = "rendered-component";
+  private static final String HOVER_TEXT_CLASS = COMPONENT_CLASS + "__hover-text";
 
   private static final SlotContext MODIFIED_CHAT = new SlotContext((char) 0, SlotContext.getForSlot(SlotType.CHAT).defaultStyle);
 
@@ -40,8 +43,13 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
     element.setAttribute("class", COMPONENT_CLASS);
 
-    if (!text.isEmpty())
-      element.appendChild(dom().createTextNode(text));
+    if (!text.isEmpty()) {
+      // Text-nodes are not elements, and thus hit-tests are impossible.
+      // The additional container allows to avoid rendering hover-events on large whitespace.
+      HTMLElement textElement = dom().createElement("span");
+      textElement.appendChild(dom().createTextNode(text));
+      element.appendChild(textElement);
+    }
 
     return element;
   }
@@ -78,12 +86,11 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     int nextAppendIndex = 0;
     int withIndex = 0;
 
-    for (int i = 0; i < translation.length(); ++i) {
-      char c = translation.charAt(i);
+    for (int charIndex = 0; charIndex < translation.length(); ++charIndex) {
       --remainingChars;
 
-      if (c == '%' && remainingChars != 0) {
-        char nextChar = translation.charAt(i + 1);
+      if (translation.charAt(charIndex)== '%' && remainingChars != 0) {
+        char nextChar = translation.charAt(charIndex + 1);
 
         int index;
 
@@ -95,16 +102,16 @@ public class HTMLComponentConstructor implements ComponentConstructor {
         if (withIndex == with.size())
           return createTextComponent(key);
 
-        if (i != 0)
-          result.add(createTextComponent(translation.substring(nextAppendIndex, i)));
+        if (charIndex != 0)
+          result.add(createTextComponent(translation.substring(nextAppendIndex, charIndex)));
 
-        if (remainingChars > 1 && translation.charAt(i + 2) == '$')
-          i += 2;
+        if (remainingChars > 1 && translation.charAt(charIndex + 2) == '$')
+          charIndex += 2;
 
-        nextAppendIndex = i + 2;
+        nextAppendIndex = charIndex + 2;
 
         result.add(with.get(index));
-        ++i;
+        ++charIndex;
       }
     }
 
@@ -112,7 +119,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
       result.add(createTextComponent(translation.substring(nextAppendIndex)));
 
     if (result.size() == 1)
-      return result.get(0);
+      return result.getFirst();
 
     return setMembers(createTextComponent(""), MembersSlot.CHILDREN, result);
   }
@@ -159,7 +166,8 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public void setHoverTextAction(Object component, Object text) {
-    throw UNSUPPORTED_EXCEPTION;
+    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, Collections.singletonList(text)) == null)
+      throw UNSUPPORTED_EXCEPTION;
   }
 
   @Override
@@ -174,7 +182,16 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public void setColor(Object component, long packedColor) {
-    ((HTMLElement) component).getStyle().setProperty("color", PackedColor.asNonAlphaHex(packedColor));
+    var style = ((HTMLElement) component).getStyle();
+    var shadowColorValue = style.getPropertyValue("--shadow-color");
+
+    if (shadowColorValue == null || shadowColorValue.isBlank()) {
+      long shadowColor = packedColor;
+      shadowColor = PackedColor.setClampedA(shadowColor, 60);
+      style.setProperty("--shadow-color", PackedColor.asAlphaHex(shadowColor));
+    }
+
+    style.setProperty("color", PackedColor.asNonAlphaHex(packedColor));
   }
 
   @Override
@@ -237,20 +254,69 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public @Nullable Object setMembers(Object component, MembersSlot slot, @Nullable List<Object> children) {
-    if (slot != MembersSlot.CHILDREN)
-      return null;
-
     HTMLElement element = (HTMLElement) component;
 
-    while (element.hasChildNodes())
-      element.removeChild(element.getFirstChild());
+    if (slot == MembersSlot.CHILDREN) {
+      var elementChildren = element.getChildNodes();
 
-    if (children != null) {
-      for (Object child : children)
-        element.appendChild((HTMLElement) child);
+      for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+        var child = elementChildren.item(childIndex);
+
+        if (child.getNodeType() == Node.ELEMENT_NODE && child.hasAttributes()) {
+          var classAttribute = child.getAttributes().getNamedItem("class");
+
+          if (classAttribute != null && classAttribute.getValue().contains(HOVER_TEXT_CLASS))
+            continue;
+        }
+
+        element.removeChild(child);
+      }
+
+      while (element.hasChildNodes())
+        element.removeChild(element.getFirstChild());
+
+      if (children != null) {
+        for (Object child : children)
+          element.appendChild((HTMLElement) child);
+      }
+
+      return element;
     }
 
-    return element;
+    if (slot == MembersSlot.HOVER_TEXT_VALUE) {
+      var elementChildren = element.getChildNodes();
+
+      for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+        var child = elementChildren.item(childIndex);
+
+        if (child.getNodeType() != Node.ELEMENT_NODE || !child.hasAttributes())
+          continue;
+
+        var classAttribute = child.getAttributes().getNamedItem("class");
+
+        if (classAttribute != null && classAttribute.getValue().contains(HOVER_TEXT_CLASS))
+          element.removeChild(child);
+      }
+
+      if (children != null) {
+        for (Object child : children) {
+          var childElement = (HTMLElement) child;
+          var classAttribute = childElement.getAttribute("class");
+
+          if (classAttribute == null || classAttribute.isBlank())
+            childElement.setAttribute("class", HOVER_TEXT_CLASS);
+          else if (!classAttribute.contains(HOVER_TEXT_CLASS))
+            childElement.setAttribute("class", classAttribute + " " + HOVER_TEXT_CLASS);
+
+
+          element.appendChild(childElement);
+        }
+      }
+
+      return element;
+    }
+
+    return null;
   }
 
   @Override

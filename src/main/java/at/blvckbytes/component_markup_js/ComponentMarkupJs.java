@@ -14,8 +14,8 @@ import at.blvckbytes.component_markup.markup.parser.token.OutputFlag;
 import at.blvckbytes.component_markup.markup.parser.token.TokenOutput;
 import at.blvckbytes.component_markup.platform.SlotType;
 import at.blvckbytes.component_markup.util.StringView;
-import org.teavm.dom.html.HTMLElement;
 import org.teavm.jso.JSExport;
+import org.teavm.jso.dom.html.HTMLElement;
 
 import java.util.EnumSet;
 import java.util.List;

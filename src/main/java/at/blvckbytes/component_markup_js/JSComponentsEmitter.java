@@ -1,7 +1,7 @@
 package at.blvckbytes.component_markup_js;
 
-import org.teavm.dom.html.HTMLElement;
 import org.teavm.jso.JSBody;
+import org.teavm.jso.dom.html.HTMLElement;
 
 public class JSComponentsEmitter {
 
