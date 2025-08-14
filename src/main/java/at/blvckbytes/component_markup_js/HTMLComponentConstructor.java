@@ -11,6 +11,7 @@ import org.teavm.dom.html.HTMLElement;
 import org.teavm.jso.JSBody;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,7 +53,42 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public Object createTranslateComponent(String key, List<Object> with, @Nullable String fallback) {
-    return createTextComponent("<translate=" + key + ">");
+    String translation = JSTranslateResolver.tryResolveKey(key);
+
+    if (translation == null)
+      return createTextComponent(key);
+
+    List<Object> result = new ArrayList<>();
+
+    int lastIndex = translation.length() - 1;
+
+    int nextAppendIndex = 0;
+    int withIndex = 0;
+
+    for (int i = 0; i <= lastIndex; ++i) {
+      char c = translation.charAt(i);
+
+      if (c == '%' && i != lastIndex && translation.charAt(i + 1) == 's') {
+        if (withIndex == with.size())
+          return createTextComponent(key);
+
+        if (i != 0)
+          result.add(createTextComponent(translation.substring(nextAppendIndex, i)));
+
+        nextAppendIndex = i + 2;
+
+        result.add(with.get(withIndex++));
+        ++i;
+      }
+    }
+
+    if (nextAppendIndex <= lastIndex)
+      result.add(createTextComponent(translation.substring(nextAppendIndex)));
+
+    if (result.size() == 1)
+      return result.get(0);
+
+    return setMembers(createTextComponent(""), MembersSlot.CHILDREN, result);
   }
 
   @Override
