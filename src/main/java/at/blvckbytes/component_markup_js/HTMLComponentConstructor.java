@@ -48,41 +48,67 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public Object createKeyComponent(String key) {
-    return createTextComponent("<key=" + key + ">");
+    String binding = JSKeybindResolver.tryResolveKeybind(key);
+
+    if (binding == null)
+      return createTextComponent(key);
+
+    if (binding.indexOf('.') < 0)
+      return createTextComponent(binding);
+
+    String translation = JSTranslationResolver.tryResolveTranslationKey(binding);
+
+    if (translation == null)
+      return createTextComponent(binding);
+
+    return createTextComponent(translation);
   }
 
   @Override
   public Object createTranslateComponent(String key, List<Object> with, @Nullable String fallback) {
-    String translation = JSTranslateResolver.tryResolveKey(key);
+    String translation = JSTranslationResolver.tryResolveTranslationKey(key);
 
     if (translation == null)
       return createTextComponent(key);
 
     List<Object> result = new ArrayList<>();
 
-    int lastIndex = translation.length() - 1;
+    int remainingChars = translation.length();
 
     int nextAppendIndex = 0;
     int withIndex = 0;
 
-    for (int i = 0; i <= lastIndex; ++i) {
+    for (int i = 0; i < translation.length(); ++i) {
       char c = translation.charAt(i);
+      --remainingChars;
 
-      if (c == '%' && i != lastIndex && translation.charAt(i + 1) == 's') {
+      if (c == '%' && remainingChars != 0) {
+        char nextChar = translation.charAt(i + 1);
+
+        int index;
+
+        if (nextChar >= '0' && nextChar <= '9')
+          index = (nextChar - '0') - 1;
+        else
+          index = withIndex++;
+
         if (withIndex == with.size())
           return createTextComponent(key);
 
         if (i != 0)
           result.add(createTextComponent(translation.substring(nextAppendIndex, i)));
 
+        if (remainingChars > 1 && translation.charAt(i + 2) == '$')
+          i += 2;
+
         nextAppendIndex = i + 2;
 
-        result.add(with.get(withIndex++));
+        result.add(with.get(index));
         ++i;
       }
     }
 
-    if (nextAppendIndex <= lastIndex)
+    if (nextAppendIndex <= translation.length() - 1)
       result.add(createTextComponent(translation.substring(nextAppendIndex)));
 
     if (result.size() == 1)
