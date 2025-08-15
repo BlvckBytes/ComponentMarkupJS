@@ -33,7 +33,7 @@ public class ComponentMarkupJs {
   );
 
   @JSExport
-  public static JSParseError tokenize(String input, boolean lenient, boolean expression, boolean interpret) {
+  public static JSParseError tokenize(String input, boolean lenient, boolean expression, boolean interpret, int renderCount) {
     TokenOutput tokenOutput = new TokenOutput(lenient ? LENIENT_FLAGS : NO_FLAGS);
     StringView inputView = StringView.of(input);
 
@@ -61,7 +61,8 @@ public class ComponentMarkupJs {
         if (interpret) {
           ComponentOutput output = MarkupInterpreter.interpret(
             COMPONENT_CONSTRUCTOR,
-            new InterpretationEnvironment(),
+            new InterpretationEnvironment()
+              .withVariable("render_count", renderCount),
             null,
             COMPONENT_CONSTRUCTOR.getSlotContext(SlotType.CHAT),
             ast
