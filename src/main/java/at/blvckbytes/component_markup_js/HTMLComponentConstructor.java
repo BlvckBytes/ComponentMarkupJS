@@ -161,10 +161,10 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
       name = createTranslateComponent("block.minecraft." + material.toLowerCase(), Collections.emptyList(), null);
     }
+    else
+      extendDefaultStyles((HTMLElement) name, SlotType.ITEM_NAME);
 
     List<Object> lines = new ArrayList<>();
-
-    extendDefaultStyles((HTMLElement) name, SlotType.ITEM_NAME);
 
     lines.add(name);
 
