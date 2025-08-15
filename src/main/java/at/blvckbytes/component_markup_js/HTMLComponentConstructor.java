@@ -86,13 +86,11 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
     List<Object> result = new ArrayList<>();
 
-    int remainingChars = translation.length() - 1;
-
     int nextAppendIndex = 0;
     int withIndex = 0;
 
     for (int charIndex = 0; charIndex < translation.length(); ++charIndex) {
-      --remainingChars;
+      int remainingChars = translation.length() - 1 - charIndex;
 
       if (translation.charAt(charIndex) == '%' && remainingChars > 0) {
         char nextChar = translation.charAt(charIndex + 1);
@@ -159,9 +157,9 @@ public class HTMLComponentConstructor implements ComponentConstructor {
         material = "stone";
 
       if (material.startsWith("minecraft:"))
-        material = material.substring(material.indexOf(':' + 1));
+        material = material.substring(material.indexOf(':') + 1);
 
-      name = createTranslateComponent("block.minecraft." + material, Collections.emptyList(), null);
+      name = createTranslateComponent("block.minecraft." + material.toLowerCase(), Collections.emptyList(), null);
     }
 
     List<Object> lines = new ArrayList<>();
@@ -189,7 +187,28 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   @Override
   public void setHoverEntityAction(Object component, String type, UUID id, @Nullable Object name) {
-    throw UNSUPPORTED_EXCEPTION;
+    List<Object> lines = new ArrayList<>();
+
+    if (name != null) {
+      extendDefaultStyles((HTMLElement) name, SlotType.ENTITY_NAME);
+      lines.add(name);
+    }
+
+    if (type.startsWith("minecraft:"))
+      type = type.substring(type.indexOf(':') + 1);
+
+    lines.add(createTranslateComponent(
+      "gui.entity_tooltip.type",
+      Collections.singletonList(
+        createTranslateComponent("entity.minecraft." + type.toLowerCase(), Collections.emptyList(), null)
+      ),
+      null
+    ));
+
+    lines.add(createTextComponent(String.valueOf(id)));
+
+    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, lines) == null)
+      throw UNSUPPORTED_EXCEPTION;
   }
 
   @Override
