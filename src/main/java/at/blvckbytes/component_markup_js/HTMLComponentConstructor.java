@@ -1,25 +1,30 @@
 package at.blvckbytes.component_markup_js;
 
 import at.blvckbytes.component_markup.expression.interpreter.InterpretationEnvironment;
+import at.blvckbytes.component_markup.markup.ast.node.style.Format;
 import at.blvckbytes.component_markup.markup.ast.node.terminal.DeferredRenderer;
 import at.blvckbytes.component_markup.markup.ast.node.terminal.RendererParameter;
 import at.blvckbytes.component_markup.platform.*;
+import at.blvckbytes.component_markup.util.LoggerProvider;
 import at.blvckbytes.component_markup.util.TriState;
+import at.blvckbytes.component_markup.util.TriStateBitFlags;
 import org.jetbrains.annotations.Nullable;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.dom.html.HTMLDocument;
 import org.teavm.jso.dom.html.HTMLElement;
-import org.teavm.jso.dom.xml.Node;
+import org.teavm.jso.dom.xml.Element;
 
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class HTMLComponentConstructor implements ComponentConstructor {
 
   private static final String COMPONENT_CLASS = "rendered-component";
+  public static final String LINE_CLASS = "rendered-component-line";
   private static final String HOVER_TEXT_CLASS = COMPONENT_CLASS + "__hover-text";
 
   private static final SlotContext MODIFIED_CHAT = new SlotContext((char) 0, SlotContext.getForSlot(SlotType.CHAT).defaultStyle);
@@ -41,7 +46,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   public Object createTextComponent(String text) {
     HTMLElement element = dom().createElement("span");
 
-    element.setAttribute("class", COMPONENT_CLASS);
+    addClass(element, COMPONENT_CLASS);
 
     if (!text.isEmpty()) {
       // Text-nodes are not elements, and thus hit-tests are impossible.
@@ -130,38 +135,50 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setClickChangePageAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickChangePageAction(Object component, String value) {}
 
   @Override
-  public void setClickCopyToClipboardAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickCopyToClipboardAction(Object component, String value) {}
 
   @Override
-  public void setClickOpenFileAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickOpenFileAction(Object component, String value) {}
 
   @Override
-  public void setClickOpenUrlAction(Object component, URL value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickOpenUrlAction(Object component, URL value) {}
 
   @Override
-  public void setClickRunCommandAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickRunCommandAction(Object component, String value) {}
 
   @Override
-  public void setClickSuggestCommandAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setClickSuggestCommandAction(Object component, String value) {}
 
   @Override
   public void setHoverItemAction(Object component, @Nullable String material, @Nullable Integer count, @Nullable Object name, @Nullable List<Object> lore, boolean hideProperties) {
-    throw UNSUPPORTED_EXCEPTION;
+    if (name == null) {
+      if (material == null)
+        material = "stone";
+
+      if (material.startsWith("minecraft:"))
+        material = material.substring(material.indexOf(':' + 1));
+
+      name = createTranslateComponent("block.minecraft." + material, Collections.emptyList(), null);
+    }
+
+    List<Object> lines = new ArrayList<>();
+
+    extendDefaultStyles((HTMLElement) name, SlotType.ITEM_NAME);
+
+    lines.add(name);
+
+    if (lore != null) {
+      for (Object loreLine : lore) {
+        extendDefaultStyles((HTMLElement) loreLine, SlotType.ITEM_LORE);
+        lines.add(loreLine);
+      }
+    }
+
+    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, lines) == null)
+      throw UNSUPPORTED_EXCEPTION;
   }
 
   @Override
@@ -176,80 +193,67 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setInsertAction(Object component, String value) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
+  public void setInsertAction(Object component, String value) {}
 
   @Override
   public void setColor(Object component, long packedColor) {
-    var style = ((HTMLElement) component).getStyle();
-    var shadowColorValue = style.getPropertyValue("--shadow-color");
+    setColor((HTMLElement) component, packedColor, true);
+  }
 
-    if (shadowColorValue == null || shadowColorValue.isBlank()) {
-      long shadowColor = packedColor;
-      shadowColor = PackedColor.setClampedA(shadowColor, 60);
-      style.setProperty("--shadow-color", PackedColor.asAlphaHex(shadowColor));
-    }
+  private void setColor(HTMLElement component, long packedColor, boolean override) {
+    var style = component.getStyle();
+
+    var color = style.getPropertyValue("color");
+
+    if (color != null && !color.isBlank() && !override)
+      return;
 
     style.setProperty("color", PackedColor.asNonAlphaHex(packedColor));
+
+    setShadowColor(component, PackedColor.setClampedA(packedColor, 60), false);
   }
 
   @Override
   public void setShadowColor(Object component, long packedColor) {
-    ((HTMLElement) component).getStyle().setProperty("--shadow-color", PackedColor.asAlphaHex(packedColor));
+    setShadowColor((HTMLElement) component, packedColor, true);
+  }
+
+  private void setShadowColor(HTMLElement component, long packedColor, boolean override) {
+    var style = component.getStyle();
+    var shadowColor = style.getPropertyValue("--shadow-color");
+
+    if (shadowColor != null && !shadowColor.isBlank() && !override)
+      return;
+
+    style.setProperty("--shadow-color", PackedColor.asAlphaHex(packedColor));
   }
 
   @Override
-  public void setFont(Object component, @Nullable String font) {
-    if (font == null) {
-      ((HTMLElement) component).getStyle().removeProperty("--font");
-      return;
-    }
-
-    ((HTMLElement) component).getStyle().setProperty("--font", font);
-  }
+  public void setFont(Object component, @Nullable String font) {}
 
   @Override
   public void setObfuscatedFormat(Object component, TriState value) {
-    if (value == TriState.TRUE)
-      appendClass(component, COMPONENT_CLASS + "--obfuscated");
+    setTriStateFormat((HTMLElement) component, value, Format.OBFUSCATED, true);
   }
 
   @Override
   public void setBoldFormat(Object component, TriState value) {
-    if (value == TriState.TRUE)
-      appendClass(component, COMPONENT_CLASS + "--bold");
+    setTriStateFormat((HTMLElement) component, value, Format.BOLD, true);
   }
 
   @Override
   public void setStrikethroughFormat(Object component, TriState value) {
-    if (value == TriState.TRUE)
-      appendClass(component, COMPONENT_CLASS + "--strikethrough");
+    setTriStateFormat((HTMLElement) component, value, Format.STRIKETHROUGH, true);
   }
 
   @Override
   public void setUnderlinedFormat(Object component, TriState value) {
-    if (value == TriState.TRUE)
-      appendClass(component, COMPONENT_CLASS + "--underlined");
+    setTriStateFormat((HTMLElement) component, value, Format.UNDERLINED, true);
   }
 
   @Override
   public void setItalicFormat(Object component, TriState value) {
-    if (value == TriState.TRUE)
-      appendClass(component, COMPONENT_CLASS + "--italic");
-  }
-
-  private void appendClass(Object component, String value) {
-    HTMLElement element = (HTMLElement) component;
-
-    String classList = element.getAttribute("class");
-
-    if (classList == null || classList.isBlank())
-      classList = value;
-    else
-      classList += " " + value;
-
-    element.setAttribute("class", classList);
+    setTriStateFormat((HTMLElement) component, value, Format.ITALIC, true);
   }
 
   @Override
@@ -257,23 +261,14 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     HTMLElement element = (HTMLElement) component;
 
     if (slot == MembersSlot.CHILDREN) {
-      var elementChildren = element.getChildNodes();
+      var elementChildren = element.getChildren();
 
       for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
         var child = elementChildren.item(childIndex);
 
-        if (child.getNodeType() == Node.ELEMENT_NODE && child.hasAttributes()) {
-          var classAttribute = child.getAttributes().getNamedItem("class");
-
-          if (classAttribute != null && classAttribute.getValue().contains(HOVER_TEXT_CLASS))
-            continue;
-        }
-
-        element.removeChild(child);
+        if (!containsClass(child, HOVER_TEXT_CLASS))
+          element.removeChild(child);
       }
-
-      while (element.hasChildNodes())
-        element.removeChild(element.getFirstChild());
 
       if (children != null) {
         for (Object child : children)
@@ -284,39 +279,54 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     }
 
     if (slot == MembersSlot.HOVER_TEXT_VALUE) {
-      var elementChildren = element.getChildNodes();
+      var elementChildren = element.getChildren();
 
       for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
         var child = elementChildren.item(childIndex);
 
-        if (child.getNodeType() != Node.ELEMENT_NODE || !child.hasAttributes())
-          continue;
-
-        var classAttribute = child.getAttributes().getNamedItem("class");
-
-        if (classAttribute != null && classAttribute.getValue().contains(HOVER_TEXT_CLASS))
+        if (containsClass(child, HOVER_TEXT_CLASS))
           element.removeChild(child);
       }
 
       if (children != null) {
+        var hoverContainer = dom().createElement("div");
+        addClass(hoverContainer, HOVER_TEXT_CLASS);
+
         for (Object child : children) {
-          var childElement = (HTMLElement) child;
-          var classAttribute = childElement.getAttribute("class");
+          HTMLElement childElement = (HTMLElement) child;
+          addClass(childElement, LINE_CLASS);
 
-          if (classAttribute == null || classAttribute.isBlank())
-            childElement.setAttribute("class", HOVER_TEXT_CLASS);
-          else if (!classAttribute.contains(HOVER_TEXT_CLASS))
-            childElement.setAttribute("class", classAttribute + " " + HOVER_TEXT_CLASS);
+          if (childElement.getChildren().getLength() == 0)
+            childElement.appendChild(dom().createTextNode(" "));
 
-
-          element.appendChild(childElement);
+          hoverContainer.appendChild(childElement);
         }
+
+        element.appendChild(hoverContainer);
       }
 
       return element;
     }
 
     return null;
+  }
+
+  private void extendDefaultStyles(HTMLElement element, SlotType type) {
+    var defaultStyle = getSlotContext(type).defaultStyle;
+
+    if (defaultStyle.packedColor != PackedColor.NULL_SENTINEL)
+      setColor(element, defaultStyle.packedColor, false);
+
+    if (defaultStyle.packedShadowColor != PackedColor.NULL_SENTINEL)
+      setShadowColor(element, defaultStyle.packedShadowColor, false);
+
+    for (Format format : Format.VALUES) {
+      TriState state = TriStateBitFlags.read(defaultStyle.formats, format.ordinal());
+
+      // As of now, there's no need to ever remove formats again, so don't call into the constructor
+      if (state != TriState.NULL)
+        setTriStateFormat(element, state, format, false);
+    }
   }
 
   @Override
@@ -327,5 +337,94 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   @Override
   public Object shallowCopyIncludingMemberLists(Object component) {
     throw UNSUPPORTED_EXCEPTION;
+  }
+
+  public static void removeClass(Element element, String className) {
+    var classAttribute = element.getAttribute("class");
+
+    int index;
+
+    if (classAttribute == null || (index = classAttribute.indexOf(className)) < 0)
+      return;
+
+    classAttribute = classAttribute.substring(0, index) + classAttribute.substring(index + className.length());
+
+    if (classAttribute.isBlank()) {
+      element.removeAttribute("class");
+      return;
+    }
+
+    element.setAttribute("class", classAttribute);
+  }
+
+  public static boolean containsClass(Element element, String className) {
+    var classAttribute = element.getAttribute("class");
+    return classAttribute != null && classAttribute.contains(className);
+  }
+
+  public static void addClass(Element element, String className) {
+    var classAttribute = element.getAttribute("class");
+
+    if (classAttribute == null || classAttribute.isBlank()) {
+      element.setAttribute("class", className);
+      return;
+    }
+
+    if (!classAttribute.contains(className))
+      element.setAttribute("class", classAttribute + " " + className);
+  }
+
+  private void setTriStateFormat(HTMLElement element, TriState value, Format format, boolean override) {
+    String classTrue;
+    String classFalse;
+
+    switch (format) {
+      case BOLD:
+        classTrue = COMPONENT_CLASS + "--bold";
+        classFalse = COMPONENT_CLASS + "--non-bold";
+        break;
+
+      case ITALIC:
+        classTrue = COMPONENT_CLASS + "--italic";
+        classFalse = COMPONENT_CLASS + "--non-italic";
+        break;
+
+      case OBFUSCATED:
+        classTrue = COMPONENT_CLASS + "--obfuscated";
+        classFalse = COMPONENT_CLASS + "--non-obfuscated";
+        break;
+
+      case UNDERLINED:
+        classTrue = COMPONENT_CLASS + "--underlined";
+        classFalse = COMPONENT_CLASS + "--non-underlined";
+        break;
+
+      case STRIKETHROUGH:
+        classTrue = COMPONENT_CLASS + "--strikethrough";
+        classFalse = COMPONENT_CLASS + "--non-strikethrough";
+        break;
+
+      default:
+        LoggerProvider.log(Level.WARNING, "Encountered unknown format: " + format.name());
+        return;
+    }
+
+    if (!override) {
+      if (containsClass(element, classTrue) || containsClass(element, classFalse))
+        return;
+    }
+
+    removeClass(element, classTrue);
+    removeClass(element, classFalse);
+
+    switch (value) {
+      case TRUE:
+        addClass(element, classTrue);
+        break;
+
+      case FALSE:
+        addClass(element, classFalse);
+        break;
+    }
   }
 }

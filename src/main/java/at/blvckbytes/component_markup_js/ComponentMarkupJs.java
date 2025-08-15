@@ -69,8 +69,11 @@ public class ComponentMarkupJs {
 
           HTMLElement[] components = new HTMLElement[output.unprocessedComponents.size()];
 
-          for (int i = 0; i < components.length; ++i)
-            components[i] = (HTMLElement) output.unprocessedComponents.get(i);
+          for (int i = 0; i < components.length; ++i) {
+            HTMLElement component = (HTMLElement) output.unprocessedComponents.get(i);
+            HTMLComponentConstructor.addClass(component, HTMLComponentConstructor.LINE_CLASS);
+            components[i] = component;
+          }
 
           JSComponentsEmitter.onEmitComponents(components);
         }
