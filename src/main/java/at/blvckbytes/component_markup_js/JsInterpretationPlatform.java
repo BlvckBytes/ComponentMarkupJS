@@ -1,8 +1,13 @@
 package at.blvckbytes.component_markup_js;
 
+import at.blvckbytes.component_markup.expression.interpreter.FormatDateResult;
+import at.blvckbytes.component_markup.expression.interpreter.FormatDateWarning;
 import at.blvckbytes.component_markup.expression.interpreter.InterpretationPlatform;
 import at.blvckbytes.component_markup.util.TriState;
+import org.jetbrains.annotations.Nullable;
 import org.teavm.jso.JSBody;
+
+import java.util.EnumSet;
 
 public class JsInterpretationPlatform implements InterpretationPlatform {
 
@@ -103,5 +108,37 @@ public class JsInterpretationPlatform implements InterpretationPlatform {
   @Override
   public String toTitleCase(String input) {
     return jsToTitleCase(input);
+  }
+
+  @Override
+  public FormatDateResult formatDate(String format, @Nullable String locale, @Nullable String timeZone, long timestamp) {
+    EnumSet<FormatDateWarning> encounteredWarnings = EnumSet.noneOf(FormatDateWarning.class);
+    String result = _formatDate(format, locale, timeZone, timestamp, encounteredWarnings);
+    return new FormatDateResult(result, encounteredWarnings);
+  }
+
+  private String _formatDate(String format, @Nullable String locale, @Nullable String timeZone, long timestamp, EnumSet<FormatDateWarning> encounteredWarnings) {
+    if (encounteredWarnings.contains(FormatDateWarning.INVALID_LOCALE))
+      locale = null;
+
+    if (encounteredWarnings.contains(FormatDateWarning.INVALID_TIMEZONE))
+      timeZone = null;
+
+    try {
+      return ApproximatedDateFormatter.format(format, locale, timeZone, timestamp);
+    } catch (Throwable e) {
+      if (e.getMessage().contains("invalid language"))
+        encounteredWarnings.add(FormatDateWarning.INVALID_LOCALE);
+      else if (e.getMessage().contains("invalid time zone"))
+        encounteredWarnings.add(FormatDateWarning.INVALID_TIMEZONE);
+
+      // As to avoid endless recursion on unknown errors
+      else {
+        System.err.println(e.getMessage());
+        return "?";
+      }
+
+      return _formatDate(format, locale, timeZone, timestamp, encounteredWarnings);
+    }
   }
 }
