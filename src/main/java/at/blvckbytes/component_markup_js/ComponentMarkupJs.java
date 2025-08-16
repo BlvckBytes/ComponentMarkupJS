@@ -13,11 +13,12 @@ import at.blvckbytes.component_markup.markup.parser.token.HierarchicalToken;
 import at.blvckbytes.component_markup.markup.parser.token.OutputFlag;
 import at.blvckbytes.component_markup.markup.parser.token.TokenOutput;
 import at.blvckbytes.component_markup.platform.SlotType;
-import at.blvckbytes.component_markup.util.StringView;
+import at.blvckbytes.component_markup.util.InputView;
 import org.teavm.jso.JSExport;
 import org.teavm.jso.dom.html.HTMLElement;
 
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 public class ComponentMarkupJs {
@@ -35,7 +36,7 @@ public class ComponentMarkupJs {
   @JSExport
   public static JSParseError tokenize(String input, boolean lenient, boolean expression, boolean interpret, int renderCount) {
     TokenOutput tokenOutput = new TokenOutput(lenient ? LENIENT_FLAGS : NO_FLAGS);
-    StringView inputView = StringView.of(input);
+    InputView inputView = InputView.of(input);
 
     String errorMessage = null;
     int errorCharIndex = -1;
@@ -61,7 +62,7 @@ public class ComponentMarkupJs {
         if (interpret) {
           ComponentOutput output = MarkupInterpreter.interpret(
             COMPONENT_CONSTRUCTOR,
-            new InterpretationEnvironment()
+            new InterpretationEnvironment(new HashMap<>(), InterpretationEnvironment.DEFAULT_INTERPRETER, JsInterpretationPlatform.INSTANCE)
               .withVariable("render_count", renderCount),
             null,
             COMPONENT_CONSTRUCTOR.getSlotContext(SlotType.CHAT),
