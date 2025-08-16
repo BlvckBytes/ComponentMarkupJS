@@ -1,8 +1,6 @@
 package at.blvckbytes.component_markup_js;
 
-import at.blvckbytes.component_markup.expression.interpreter.FormatDateResult;
-import at.blvckbytes.component_markup.expression.interpreter.FormatDateWarning;
-import at.blvckbytes.component_markup.expression.interpreter.InterpretationPlatform;
+import at.blvckbytes.component_markup.expression.interpreter.*;
 import at.blvckbytes.component_markup.util.TriState;
 import org.jetbrains.annotations.Nullable;
 import org.teavm.jso.JSBody;
@@ -111,13 +109,7 @@ public class JsInterpretationPlatform implements InterpretationPlatform {
   }
 
   @Override
-  public FormatDateResult formatDate(String format, @Nullable String locale, @Nullable String timeZone, long timestamp) {
-    EnumSet<FormatDateWarning> encounteredWarnings = EnumSet.noneOf(FormatDateWarning.class);
-    String result = _formatDate(format, locale, timeZone, timestamp, encounteredWarnings);
-    return new FormatDateResult(result, encounteredWarnings);
-  }
-
-  private String _formatDate(String format, @Nullable String locale, @Nullable String timeZone, long timestamp, EnumSet<FormatDateWarning> encounteredWarnings) {
+  public String formatDate(String format, @Nullable String locale, @Nullable String timeZone, long timestamp, EnumSet<FormatDateWarning> encounteredWarnings) {
     if (encounteredWarnings.contains(FormatDateWarning.INVALID_LOCALE))
       locale = null;
 
@@ -127,18 +119,52 @@ public class JsInterpretationPlatform implements InterpretationPlatform {
     try {
       return ApproximatedDateFormatter.format(format, locale, timeZone, timestamp);
     } catch (Throwable e) {
-      if (e.getMessage().contains("invalid language"))
-        encounteredWarnings.add(FormatDateWarning.INVALID_LOCALE);
-      else if (e.getMessage().contains("invalid time zone"))
-        encounteredWarnings.add(FormatDateWarning.INVALID_TIMEZONE);
+      if (e.getMessage().contains("invalid language")) {
+        if (!encounteredWarnings.add(FormatDateWarning.INVALID_LOCALE))
+          return "?";
+      }
 
-      // As to avoid endless recursion on unknown errors
+      else if (e.getMessage().contains("invalid time zone")) {
+        if (!encounteredWarnings.add(FormatDateWarning.INVALID_TIMEZONE))
+          return "?";
+      }
+
       else {
         System.err.println(e.getMessage());
         return "?";
       }
 
-      return _formatDate(format, locale, timeZone, timestamp, encounteredWarnings);
+      return formatDate(format, locale, timeZone, timestamp, encounteredWarnings);
+    }
+  }
+
+  @Override
+  public String formatNumber(String format, @Nullable String roundingMode, @Nullable String locale, Number number, EnumSet<FormatNumberWarning> encounteredWarnings) {
+    if (encounteredWarnings.contains(FormatNumberWarning.INVALID_LOCALE))
+      locale = null;
+
+    if (encounteredWarnings.contains(FormatNumberWarning.INVALID_ROUNDING_MODE))
+      roundingMode = null;
+
+    try {
+      return ApproximatedNumberFormatter.format(format, roundingMode, locale, number.doubleValue());
+    } catch (Throwable e) {
+      if (e.getMessage().contains("invalid language")) {
+        if (!encounteredWarnings.add(FormatNumberWarning.INVALID_LOCALE))
+          return "?";
+      }
+
+      else if (e.getMessage().contains("invalid rounding")) {
+        if (!encounteredWarnings.add(FormatNumberWarning.INVALID_ROUNDING_MODE))
+          return "?";
+      }
+
+      else {
+        System.err.println(e.getMessage());
+        return "?";
+      }
+
+      return formatNumber(format, roundingMode, locale, number, encounteredWarnings);
     }
   }
 }
