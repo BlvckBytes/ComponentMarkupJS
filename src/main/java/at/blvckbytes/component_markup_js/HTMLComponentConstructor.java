@@ -14,7 +14,6 @@ import org.teavm.jso.dom.html.HTMLDocument;
 import org.teavm.jso.dom.html.HTMLElement;
 import org.teavm.jso.dom.xml.Element;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -142,7 +141,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   public void setClickOpenFileAction(Object component, String value) {}
 
   @Override
-  public void setClickOpenUrlAction(Object component, URL value) {}
+  public void setClickOpenUrlAction(Object component, String value) {}
 
   @Override
   public void setClickRunCommandAction(Object component, String value) {}
