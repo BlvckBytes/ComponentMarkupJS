@@ -1,9 +1,6 @@
 package at.blvckbytes.component_markup_js;
 
-import at.blvckbytes.component_markup.expression.interpreter.InterpretationEnvironment;
 import at.blvckbytes.component_markup.markup.ast.node.style.Format;
-import at.blvckbytes.component_markup.markup.ast.node.terminal.DeferredRenderer;
-import at.blvckbytes.component_markup.markup.ast.node.terminal.RendererParameter;
 import at.blvckbytes.component_markup.platform.*;
 import at.blvckbytes.component_markup.util.LoggerProvider;
 import at.blvckbytes.component_markup.util.TriState;
@@ -28,10 +25,13 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
   private static final SlotContext MODIFIED_CHAT = new SlotContext((char) 0, SlotContext.getForSlot(SlotType.CHAT).defaultStyle);
 
-  private static final RuntimeException UNSUPPORTED_EXCEPTION = new UnsupportedOperationException("Not supported by the web-editor");
-
   @JSBody(script = "return document;")
   private static native HTMLDocument dom();
+
+  @Override
+  public boolean doesSupport(PlatformFeature feature) {
+    return true;
+  }
 
   @Override
   public SlotContext getSlotContext(SlotType slot) {
@@ -123,12 +123,9 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     if (result.size() == 1)
       return result.getFirst();
 
-    return setMembers(createTextComponent(""), MembersSlot.CHILDREN, result);
-  }
-
-  @Override
-  public DeferredComponent createDeferredComponent(DeferredRenderer<?> renderer, RendererParameter parameter, InterpretationEnvironment environmentSnapshot, SlotContext slotContext) {
-    throw UNSUPPORTED_EXCEPTION;
+    Object container = createTextComponent("");
+    setChildren(container, result);
+    return container;
   }
 
   @Override
@@ -174,14 +171,12 @@ public class HTMLComponentConstructor implements ComponentConstructor {
       }
     }
 
-    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, lines) == null)
-      throw UNSUPPORTED_EXCEPTION;
+    setHoverTextLines(component, lines);
   }
 
   @Override
   public void setHoverTextAction(Object component, Object text) {
-    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, Collections.singletonList(text)) == null)
-      throw UNSUPPORTED_EXCEPTION;
+    setHoverTextLines(component, Collections.singletonList(text));
   }
 
   @Override
@@ -206,8 +201,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
 
     lines.add(createTextComponent(String.valueOf(id)));
 
-    if (setMembers(component, MembersSlot.HOVER_TEXT_VALUE, lines) == null)
-      throw UNSUPPORTED_EXCEPTION;
+    setHoverTextLines(component, lines);
   }
 
   @Override
@@ -275,58 +269,50 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public @Nullable Object setMembers(Object component, MembersSlot slot, @Nullable List<Object> children) {
+  public void setChildren(Object component, @Nullable List<Object> children) {
     HTMLElement element = (HTMLElement) component;
+    var elementChildren = element.getChildren();
 
-    if (slot == MembersSlot.CHILDREN) {
-      var elementChildren = element.getChildren();
+    for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+      var child = elementChildren.item(childIndex);
 
-      for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
-        var child = elementChildren.item(childIndex);
-
-        if (!containsClass(child, HOVER_TEXT_CLASS))
-          element.removeChild(child);
-      }
-
-      if (children != null) {
-        for (Object child : children)
-          element.appendChild((HTMLElement) child);
-      }
-
-      return element;
+      if (!containsClass(child, HOVER_TEXT_CLASS))
+        element.removeChild(child);
     }
 
-    if (slot == MembersSlot.HOVER_TEXT_VALUE) {
-      var elementChildren = element.getChildren();
+    if (children != null) {
+      for (Object child : children)
+        element.appendChild((HTMLElement) child);
+    }
+  }
 
-      for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
-        var child = elementChildren.item(childIndex);
+  private void setHoverTextLines(Object component, @Nullable List<Object> children) {
+    HTMLElement element = (HTMLElement) component;
+    var elementChildren = element.getChildren();
 
-        if (containsClass(child, HOVER_TEXT_CLASS))
-          element.removeChild(child);
-      }
+    for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+      var child = elementChildren.item(childIndex);
 
-      if (children != null) {
-        var hoverContainer = dom().createElement("div");
-        addClass(hoverContainer, HOVER_TEXT_CLASS);
-
-        for (Object child : children) {
-          HTMLElement childElement = (HTMLElement) child;
-          addClass(childElement, LINE_CLASS);
-
-          if (childElement.getChildren().getLength() == 0)
-            childElement.appendChild(dom().createTextNode(" "));
-
-          hoverContainer.appendChild(childElement);
-        }
-
-        element.appendChild(hoverContainer);
-      }
-
-      return element;
+      if (containsClass(child, HOVER_TEXT_CLASS))
+        element.removeChild(child);
     }
 
-    return null;
+    if (children != null) {
+      var hoverContainer = dom().createElement("div");
+      addClass(hoverContainer, HOVER_TEXT_CLASS);
+
+      for (Object child : children) {
+        HTMLElement childElement = (HTMLElement) child;
+        addClass(childElement, LINE_CLASS);
+
+        if (childElement.getChildren().getLength() == 0)
+          childElement.appendChild(dom().createTextNode(" "));
+
+        hoverContainer.appendChild(childElement);
+      }
+
+      element.appendChild(hoverContainer);
+    }
   }
 
   private void extendDefaultStyles(HTMLElement element, SlotType type) {
@@ -345,16 +331,6 @@ public class HTMLComponentConstructor implements ComponentConstructor {
       if (state != TriState.NULL)
         setTriStateFormat(element, state, format, false);
     }
-  }
-
-  @Override
-  public @Nullable List<Object> getMembers(Object component, MembersSlot slot) {
-    throw UNSUPPORTED_EXCEPTION;
-  }
-
-  @Override
-  public Object shallowCopyIncludingMemberLists(Object component) {
-    throw UNSUPPORTED_EXCEPTION;
   }
 
   public static void removeClass(Element element, String className) {
