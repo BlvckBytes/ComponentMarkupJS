@@ -113,7 +113,7 @@ public class ComponentMarkupJs {
 
   private static final PlatformEntity RECIPIENT = makeRandomEntity("BlvckBytes", WORLD_ORIGIN, 5);
 
-  private static final DataProvider DATA_PROVIDER = new DataProvider(){
+  private static final DataProvider DATA_PROVIDER = new DataProvider() {
 
     @Override
     public List<PlatformEntity> executeSelector(TargetSelector selector, Coordinates origin, @Nullable PlatformEntity self) {
@@ -126,6 +126,14 @@ public class ComponentMarkupJs {
       }
 
       return result;
+    }
+
+    @Override
+    public Object resolveScore(String name, String objective, @Nullable String type) {
+      if (objective.equals("health"))
+        return ThreadLocalRandom.current().nextInt(3, 20);
+
+      return ThreadLocalRandom.current().nextInt(0, 100);
     }
   };
 
