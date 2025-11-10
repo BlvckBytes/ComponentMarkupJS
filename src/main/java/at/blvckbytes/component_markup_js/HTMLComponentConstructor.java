@@ -1,10 +1,14 @@
 package at.blvckbytes.component_markup_js;
 
+import at.blvckbytes.component_markup.constructor.ComponentConstructor;
+import at.blvckbytes.component_markup.constructor.ConstructorFeature;
+import at.blvckbytes.component_markup.constructor.SlotContext;
+import at.blvckbytes.component_markup.constructor.SlotType;
 import at.blvckbytes.component_markup.markup.ast.node.style.Format;
-import at.blvckbytes.component_markup.platform.*;
 import at.blvckbytes.component_markup.util.LoggerProvider;
 import at.blvckbytes.component_markup.util.TriState;
 import at.blvckbytes.component_markup.util.TriStateBitFlags;
+import at.blvckbytes.component_markup.util.color.PackedColor;
 import org.jetbrains.annotations.Nullable;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.dom.html.HTMLDocument;
@@ -29,7 +33,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   private static native HTMLDocument dom();
 
   @Override
-  public boolean doesSupport(PlatformFeature feature) {
+  public boolean doesSupport(ConstructorFeature feature) {
     return true;
   }
 
