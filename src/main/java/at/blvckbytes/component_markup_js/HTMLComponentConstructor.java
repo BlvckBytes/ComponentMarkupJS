@@ -128,7 +128,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
       return result.getFirst();
 
     Object container = createTextComponent("");
-    setChildren(container, result);
+    addChildren(container, result);
     return container;
   }
 
@@ -273,7 +273,12 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setChildren(Object component, @Nullable List<Object> children) {
+  public Object finaliseComponent(Object component) {
+    return component;
+  }
+
+  @Override
+  public void addChildren(Object component, @Nullable List<Object> children) {
     HTMLElement element = (HTMLElement) component;
     var elementChildren = element.getChildren();
 

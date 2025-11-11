@@ -59,7 +59,7 @@ public class ComponentMarkupJs {
         if (interpret) {
           List<Object> result = MarkupInterpreter.interpret(
             COMPONENT_CONSTRUCTOR,
-            new InterpretationEnvironment(new HashMap<>(), InterpretationEnvironment.DEFAULT_INTERPRETER, JsInterpretationPlatform.INSTANCE)
+            new InterpretationEnvironment(new HashMap<>(), InterpretationEnvironment.DEFAULT_INTERPRETER, JsInterpretationPlatform.INSTANCE, null)
               .withVariable("render_count", renderCount),
             COMPONENT_CONSTRUCTOR.getSlotContext(SlotType.CHAT),
             ast
