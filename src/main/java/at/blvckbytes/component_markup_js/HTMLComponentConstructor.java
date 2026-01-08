@@ -5,10 +5,10 @@ import at.blvckbytes.component_markup.constructor.ConstructorFeature;
 import at.blvckbytes.component_markup.constructor.SlotContext;
 import at.blvckbytes.component_markup.constructor.SlotType;
 import at.blvckbytes.component_markup.markup.ast.node.style.Format;
-import at.blvckbytes.component_markup.util.LoggerProvider;
 import at.blvckbytes.component_markup.util.TriState;
 import at.blvckbytes.component_markup.util.TriStateBitFlags;
 import at.blvckbytes.component_markup.util.color.PackedColor;
+import at.blvckbytes.component_markup.util.logging.GlobalLogger;
 import org.jetbrains.annotations.Nullable;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.dom.html.HTMLDocument;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 
-public class HTMLComponentConstructor implements ComponentConstructor {
+public class HTMLComponentConstructor implements ComponentConstructor<HTMLElement, HTMLElement> {
 
   private static final String COMPONENT_CLASS = "rendered-component";
   public static final String LINE_CLASS = "rendered-component-line";
@@ -46,7 +46,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public Object createTextComponent(String text) {
+  public HTMLElement createTextComponent(String text) {
     HTMLElement element = dom().createElement("span");
 
     addClass(element, COMPONENT_CLASS);
@@ -63,7 +63,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public Object createKeyComponent(String key) {
+  public HTMLElement createKeyComponent(String key) {
     String binding = JSKeybindResolver.tryResolveKeybind(key);
 
     if (binding == null)
@@ -81,13 +81,13 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public Object createTranslateComponent(String key, List<Object> with, @Nullable String fallback) {
+  public HTMLElement createTranslateComponent(String key, List<HTMLElement> with, @Nullable String fallback) {
     String translation = JSTranslationResolver.tryResolveTranslationKey(key);
 
     if (translation == null)
       return createTextComponent(key);
 
-    List<Object> result = new ArrayList<>();
+    List<HTMLElement> result = new ArrayList<>();
 
     int nextAppendIndex = 0;
     int withIndex = 0;
@@ -127,31 +127,31 @@ public class HTMLComponentConstructor implements ComponentConstructor {
     if (result.size() == 1)
       return result.getFirst();
 
-    Object container = createTextComponent("");
+    HTMLElement container = createTextComponent("");
     addChildren(container, result);
     return container;
   }
 
   @Override
-  public void setClickChangePageAction(Object component, String value) {}
+  public void setClickChangePageAction(HTMLElement component, String value) {}
 
   @Override
-  public void setClickCopyToClipboardAction(Object component, String value) {}
+  public void setClickCopyToClipboardAction(HTMLElement component, String value) {}
 
   @Override
-  public void setClickOpenFileAction(Object component, String value) {}
+  public void setClickOpenFileAction(HTMLElement component, String value) {}
 
   @Override
-  public void setClickOpenUrlAction(Object component, String value) {}
+  public void setClickOpenUrlAction(HTMLElement component, String value) {}
 
   @Override
-  public void setClickRunCommandAction(Object component, String value) {}
+  public void setClickRunCommandAction(HTMLElement component, String value) {}
 
   @Override
-  public void setClickSuggestCommandAction(Object component, String value) {}
+  public void setClickSuggestCommandAction(HTMLElement component, String value) {}
 
   @Override
-  public void setHoverItemAction(Object component, @Nullable String material, @Nullable Integer count, @Nullable Object name, @Nullable List<Object> lore, boolean hideProperties) {
+  public void setHoverItemAction(HTMLElement component, @Nullable String material, @Nullable Integer count, @Nullable HTMLElement name, @Nullable List<HTMLElement> lore, boolean hideProperties) {
     if (name == null) {
       if (material == null)
         material = "stone";
@@ -162,15 +162,15 @@ public class HTMLComponentConstructor implements ComponentConstructor {
       name = createTranslateComponent("block.minecraft." + material.toLowerCase(), Collections.emptyList(), null);
     }
     else
-      extendDefaultStyles((HTMLElement) name, SlotType.ITEM_NAME);
+      extendDefaultStyles(name, SlotType.ITEM_NAME);
 
-    List<Object> lines = new ArrayList<>();
+    List<HTMLElement> lines = new ArrayList<>();
 
     lines.add(name);
 
     if (lore != null) {
-      for (Object loreLine : lore) {
-        extendDefaultStyles((HTMLElement) loreLine, SlotType.ITEM_LORE);
+      for (HTMLElement loreLine : lore) {
+        extendDefaultStyles(loreLine, SlotType.ITEM_LORE);
         lines.add(loreLine);
       }
     }
@@ -179,16 +179,16 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setHoverTextAction(Object component, Object text) {
+  public void setHoverTextAction(HTMLElement component, HTMLElement text) {
     setHoverTextLines(component, Collections.singletonList(text));
   }
 
   @Override
-  public void setHoverEntityAction(Object component, String type, UUID id, @Nullable Object name) {
-    List<Object> lines = new ArrayList<>();
+  public void setHoverEntityAction(HTMLElement component, String type, UUID id, @Nullable HTMLElement name) {
+    List<HTMLElement> lines = new ArrayList<>();
 
     if (name != null) {
-      extendDefaultStyles((HTMLElement) name, SlotType.ENTITY_NAME);
+      extendDefaultStyles(name, SlotType.ENTITY_NAME);
       lines.add(name);
     }
 
@@ -209,11 +209,11 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setInsertAction(Object component, String value) {}
+  public void setInsertAction(HTMLElement component, String value) {}
 
   @Override
-  public void setColor(Object component, long packedColor) {
-    setColor((HTMLElement) component, packedColor, true);
+  public void setColor(HTMLElement component, long packedColor) {
+    setColor(component, packedColor, true);
   }
 
   private void setColor(HTMLElement component, long packedColor, boolean override) {
@@ -230,8 +230,8 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setShadowColor(Object component, long packedColor) {
-    setShadowColor((HTMLElement) component, packedColor, true);
+  public void setShadowColor(HTMLElement component, long packedColor) {
+    setShadowColor(component, packedColor, true);
   }
 
   private void setShadowColor(HTMLElement component, long packedColor, boolean override) {
@@ -245,82 +245,79 @@ public class HTMLComponentConstructor implements ComponentConstructor {
   }
 
   @Override
-  public void setFont(Object component, @Nullable String font) {}
+  public void setFont(HTMLElement component, @Nullable String font) {}
 
   @Override
-  public void setObfuscatedFormat(Object component, TriState value) {
-    setTriStateFormat((HTMLElement) component, value, Format.OBFUSCATED, true);
+  public void setObfuscatedFormat(HTMLElement component, TriState value) {
+    setTriStateFormat(component, value, Format.OBFUSCATED, true);
   }
 
   @Override
-  public void setBoldFormat(Object component, TriState value) {
-    setTriStateFormat((HTMLElement) component, value, Format.BOLD, true);
+  public void setBoldFormat(HTMLElement component, TriState value) {
+    setTriStateFormat(component, value, Format.BOLD, true);
   }
 
   @Override
-  public void setStrikethroughFormat(Object component, TriState value) {
-    setTriStateFormat((HTMLElement) component, value, Format.STRIKETHROUGH, true);
+  public void setStrikethroughFormat(HTMLElement component, TriState value) {
+    setTriStateFormat(component, value, Format.STRIKETHROUGH, true);
   }
 
   @Override
-  public void setUnderlinedFormat(Object component, TriState value) {
-    setTriStateFormat((HTMLElement) component, value, Format.UNDERLINED, true);
+  public void setUnderlinedFormat(HTMLElement component, TriState value) {
+    setTriStateFormat(component, value, Format.UNDERLINED, true);
   }
 
   @Override
-  public void setItalicFormat(Object component, TriState value) {
-    setTriStateFormat((HTMLElement) component, value, Format.ITALIC, true);
+  public void setItalicFormat(HTMLElement component, TriState value) {
+    setTriStateFormat(component, value, Format.ITALIC, true);
   }
 
   @Override
-  public Object finaliseComponent(Object component) {
+  public HTMLElement finalizeComponent(HTMLElement component) {
     return component;
   }
 
   @Override
-  public void addChildren(Object component, @Nullable List<Object> children) {
-    HTMLElement element = (HTMLElement) component;
-    var elementChildren = element.getChildren();
+  public void addChildren(HTMLElement component, @Nullable List<HTMLElement> children) {
+    var elementChildren = component.getChildren();
 
     for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
       var child = elementChildren.item(childIndex);
 
       if (!containsClass(child, HOVER_TEXT_CLASS))
-        element.removeChild(child);
+        component.removeChild(child);
     }
 
     if (children != null) {
-      for (Object child : children)
-        element.appendChild((HTMLElement) child);
+      for (HTMLElement child : children)
+        component.appendChild(child);
     }
   }
 
-  private void setHoverTextLines(Object component, @Nullable List<Object> children) {
-    HTMLElement element = (HTMLElement) component;
-    var elementChildren = element.getChildren();
+  private void setHoverTextLines(HTMLElement component, @Nullable List<HTMLElement> children) {
+    var elementChildren = component.getChildren();
 
     for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
       var child = elementChildren.item(childIndex);
 
       if (containsClass(child, HOVER_TEXT_CLASS))
-        element.removeChild(child);
+        component.removeChild(child);
     }
 
     if (children != null) {
       var hoverContainer = dom().createElement("div");
       addClass(hoverContainer, HOVER_TEXT_CLASS);
 
-      for (Object child : children) {
-        HTMLElement childElement = (HTMLElement) child;
-        addClass(childElement, LINE_CLASS);
+      for (HTMLElement child : children) {
+        addClass(child, LINE_CLASS);
 
-        if (childElement.getChildren().getLength() == 0)
-          childElement.appendChild(dom().createTextNode(" "));
+        if (child.getChildren().getLength() == 0)
+          child.appendChild(dom().createTextNode(" "));
 
-        hoverContainer.appendChild(childElement);
+        hoverContainer.appendChild(child);
       }
 
-      element.appendChild(hoverContainer);
+      component.appendChild(hoverContainer);
     }
   }
 
@@ -408,7 +405,7 @@ public class HTMLComponentConstructor implements ComponentConstructor {
         break;
 
       default:
-        LoggerProvider.log(Level.WARNING, "Encountered unknown format: " + format.name());
+        GlobalLogger.log(Level.WARNING, "Encountered unknown format: " + format.name());
         return;
     }
 

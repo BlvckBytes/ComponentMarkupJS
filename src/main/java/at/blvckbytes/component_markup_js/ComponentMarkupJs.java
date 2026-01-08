@@ -57,18 +57,19 @@ public class ComponentMarkupJs {
         MarkupNode ast = MarkupParser.parse(inputView, BuiltInTagRegistry.INSTANCE, tokenOutput);
 
         if (interpret) {
-          List<Object> result = MarkupInterpreter.interpret(
-            COMPONENT_CONSTRUCTOR,
+          List<HTMLElement> result = MarkupInterpreter.interpret(
+            ast,
+            SlotType.CHAT,
             new InterpretationEnvironment(new HashMap<>(), InterpretationEnvironment.DEFAULT_INTERPRETER, JsInterpretationPlatform.INSTANCE, null)
               .withVariable("render_count", renderCount),
-            COMPONENT_CONSTRUCTOR.getSlotContext(SlotType.CHAT),
-            ast
+            COMPONENT_CONSTRUCTOR,
+            ConsoleLogger.INSTANCE
           );
 
           HTMLElement[] components = new HTMLElement[result.size()];
 
           for (int i = 0; i < components.length; ++i) {
-            HTMLElement component = (HTMLElement) result.get(i);
+            HTMLElement component = result.get(i);
             HTMLComponentConstructor.addClass(component, HTMLComponentConstructor.LINE_CLASS);
             components[i] = component;
           }
