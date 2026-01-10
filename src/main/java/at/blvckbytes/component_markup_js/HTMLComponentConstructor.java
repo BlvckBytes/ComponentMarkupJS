@@ -33,6 +33,11 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
   private static native HTMLDocument dom();
 
   @Override
+  public Class<HTMLElement> getComponentClass() {
+    return HTMLElement.class;
+  }
+
+  @Override
   public boolean doesSupport(ConstructorFeature feature) {
     return true;
   }
@@ -212,16 +217,12 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
   public void setInsertAction(HTMLElement component, String value) {}
 
   @Override
-  public void setColor(HTMLElement component, long packedColor) {
-    setColor(component, packedColor, true);
-  }
-
-  private void setColor(HTMLElement component, long packedColor, boolean override) {
+  public void setColor(HTMLElement component, long packedColor, boolean overwrite) {
     var style = component.getStyle();
 
     var color = style.getPropertyValue("color");
 
-    if (color != null && !color.isBlank() && !override)
+    if (color != null && !color.isBlank() && !overwrite)
       return;
 
     style.setProperty("color", PackedColor.asNonAlphaHex(packedColor));
