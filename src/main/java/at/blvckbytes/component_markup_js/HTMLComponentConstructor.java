@@ -68,6 +68,26 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
   }
 
   @Override
+  public boolean setText(HTMLElement component, String text) {
+    var elementChildren = component.getChildren();
+
+    for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+      var child = elementChildren.item(childIndex);
+
+      if (!child.getTagName().equalsIgnoreCase("span"))
+        continue;
+
+      if (containsClass(child, COMPONENT_CLASS))
+        continue;
+
+      component.replaceChild(dom().createTextNode(text), child);
+      return true;
+    }
+
+    return false;
+  }
+
+  @Override
   public HTMLElement createKeyComponent(String key) {
     String binding = JSKeybindResolver.tryResolveKeybind(key);
 
@@ -325,8 +345,8 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
   private void extendDefaultStyles(HTMLElement element, SlotType type) {
     var defaultStyle = getSlotContext(type).defaultStyle;
 
-    if (defaultStyle.packedColor != PackedColor.NULL_SENTINEL)
-      setColor(element, defaultStyle.packedColor, false);
+    if (defaultStyle.getPackedColor() != PackedColor.NULL_SENTINEL)
+      setColor(element, defaultStyle.getPackedColor(), false);
 
     if (defaultStyle.packedShadowColor != PackedColor.NULL_SENTINEL)
       setShadowColor(element, defaultStyle.packedShadowColor, false);
