@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 public class HTMLComponentConstructor implements ComponentConstructor<HTMLElement, HTMLElement> {
@@ -296,6 +297,21 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
   @Override
   public HTMLElement finalizeComponent(HTMLElement component) {
     return component;
+  }
+
+  @Override
+  public void forEachTextOf(HTMLElement component, Consumer<String> handler) {
+    var elementChildren = component.getChildren();
+
+    for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+      var child = elementChildren.item(childIndex);
+
+      if (child.getTagName().equalsIgnoreCase("span"))
+        handler.accept(child.getTextContent());
+
+      if (containsClass(child, COMPONENT_CLASS))
+        forEachTextOf((HTMLElement) child, handler);
+    }
   }
 
   @Override
