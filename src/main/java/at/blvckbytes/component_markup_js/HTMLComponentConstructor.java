@@ -125,7 +125,7 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
     String translation = JSTranslationResolver.tryResolveTranslationKey(key);
 
     if (translation == null)
-      return createTextComponent(key);
+      return createTextComponent(fallback == null ? key : fallback);
 
     List<HTMLElement> result = new ArrayList<>();
 
