@@ -26,6 +26,8 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
 
   private static final String COMPONENT_CLASS = "rendered-component";
   public static final String LINE_CLASS = "rendered-component-line";
+  public static final String KEYBIND_CLASS = "keybind-component";
+  public static final String TRANSLATE_CLASS = "translate-component";
   private static final String HOVER_TEXT_CLASS = COMPONENT_CLASS + "__hover-text";
 
   private static final SlotContext MODIFIED_CHAT = new SlotContext((char) 0, SlotContext.getForSlot(SlotType.CHAT).defaultStyle);
@@ -90,6 +92,12 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
 
   @Override
   public HTMLElement createKeyComponent(String key) {
+    HTMLElement result = _createKeyComponent(key);
+    addClass(result, KEYBIND_CLASS);
+    return result;
+  }
+
+  private HTMLElement _createKeyComponent(String key) {
     String binding = JSKeybindResolver.tryResolveKeybind(key);
 
     if (binding == null)
@@ -108,6 +116,12 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
 
   @Override
   public HTMLElement createTranslateComponent(String key, List<HTMLElement> with, @Nullable String fallback) {
+    HTMLElement result = _createTranslateComponent(key, with, fallback);
+    addClass(result, TRANSLATE_CLASS);
+    return result;
+  }
+
+  private HTMLElement _createTranslateComponent(String key, List<HTMLElement> with, @Nullable String fallback) {
     String translation = JSTranslationResolver.tryResolveTranslationKey(key);
 
     if (translation == null)
@@ -301,6 +315,9 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
 
   @Override
   public void forEachTextOf(HTMLElement component, Consumer<String> handler) {
+    if (component.getTagName().equalsIgnoreCase("span"))
+      handler.accept(component.getTextContent());
+
     var elementChildren = component.getChildren();
 
     for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
@@ -311,6 +328,24 @@ public class HTMLComponentConstructor implements ComponentConstructor<HTMLElemen
 
       if (containsClass(child, COMPONENT_CLASS))
         forEachTextOf((HTMLElement) child, handler);
+    }
+  }
+
+  @Override
+  public void forEachNonTextUnitOf(HTMLElement component, Consumer<HTMLElement> handler) {
+    if (containsClass(component, TRANSLATE_CLASS) || containsClass(component, KEYBIND_CLASS))
+      handler.accept(component);
+
+    var elementChildren = component.getChildren();
+
+    for (int childIndex = elementChildren.getLength() - 1; childIndex >= 0; --childIndex) {
+      var child = elementChildren.item(childIndex);
+
+      if (containsClass(child, TRANSLATE_CLASS) || containsClass(child, KEYBIND_CLASS))
+        handler.accept((HTMLElement) child);
+
+      if (containsClass(child, COMPONENT_CLASS))
+        forEachNonTextUnitOf((HTMLElement) child, handler);
     }
   }
 
